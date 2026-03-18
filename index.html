@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL What-If Simulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #ccc;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 32px 20px 80px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    h1 { color: #fff; font-size: 18px; margin-bottom: 4px; }
+    p.intro { color: #555; margin-bottom: 32px; }
+
+    h3 { color: #888; font-size: 12px; font-weight: normal; margin-bottom: 8px; text-transform: uppercase; }
+
+    .seksjon { margin-bottom: 28px; }
+
+    select, input {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #ccc;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 7px 9px;
+      width: 100%;
+    }
+
+    .rad { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    button {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #aaa;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
+    button:hover { color: #fff; border-color: #555; }
+    button:disabled { opacity: 0.3; cursor: default; }
+
+    .kjor-knapp {
+      width: 100%;
+      padding: 10px;
+      background: #152030;
+      border-color: #1e3a55;
+      color: #6ab0d8;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { color: #444; font-weight: normal; text-align: left; padding: 5px 7px; border-bottom: 1px solid #1e1e1e; }
+    td { padding: 7px 7px; border-bottom: 1px solid #161616; }
+    tr { cursor: pointer; }
+    tr:hover td { background: #181818; }
+    tr.valgt td { background: #111e2a; }
+
+    .tabell-wrap { max-height: 320px; overflow-y: auto; border: 1px solid #1e1e1e; }
+
+    .sokerad { display: flex; gap: 6px; }
+    .sokerad input { flex: 1; }
+
+    .sokresultater { border: 1px solid #1e1e1e; display: none; }
+    .sokresultater.vis { display: block; }
+
+    .soktreffer {
+      padding: 8px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #161616;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .soktreffer:hover { background: #181818; }
+    .soktreffer.valgt { background: #111e2a; }
+
+    .faner { display: flex; gap: 4px; margin-bottom: 10px; }
+    .fane { padding: 6px 12px; font-size: 12px; border: 1px solid #222; background: #0f0f0f; color: #555; }
+    .fane.aktiv { border-color: #333; color: #aaa; }
+
+    .faneinnhold { display: none; }
+    .faneinnhold.aktiv { display: block; }
+
+    .inputrad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+    .felt label { display: block; font-size: 11px; color: #444; margin-bottom: 3px; }
+
+    .resultater { display: none; margin-top: 40px; padding-top: 28px; border-top: 1px solid #1e1e1e; }
+    .resultater.vis { display: block; }
+
+    .resultater h2 { font-size: 15px; color: #fff; margin-bottom: 20px; }
+
+    .poengboks { display: grid; grid-template-columns: 1fr 50px 1fr; border: 1px solid #1e1e1e; margin-bottom: 20px; }
+    .poengside { padding: 18px 14px; background: #141414; }
+    .poengside.med { background: #131920; }
+    .poengetikett { font-size: 11px; color: #444; margin-bottom: 3px; }
+    .poengnavn { font-size: 11px; color: #555; margin-bottom: 10px; }
+    .poengverdi { font-size: 38px; color: #fff; line-height: 1; }
+    .poengverdi.opp { color: #5c9e6e; }
+    .poengverdi.ned { color: #9e5c5c; }
+    .poengusikkerhet { font-size: 11px; color: #444; margin-top: 3px; }
+
+    .poengmidt {
+      display: flex; align-items: center; justify-content: center;
+      background: #111; border-left: 1px solid #1e1e1e; border-right: 1px solid #1e1e1e;
+      font-size: 14px;
+    }
+
+    .poengmidt.opp { color: #5c9e6e; }
+    .poengmidt.ned { color: #9e5c5c; }
+
+    .statistikkrad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 20px; }
+    .statistikkboks { background: #141414; border: 1px solid #1e1e1e; padding: 12px; }
+    .statistikketikkett { font-size: 11px; color: #444; margin-bottom: 5px; }
+    .statistikkverdi { font-size: 20px; color: #ccc; }
+    .statistikkverdi.opp { color: #5c9e6e; }
+    .statistikkverdi.ned { color: #9e5c5c; }
+
+    .dim { color: #444; }
+    .melding { color: #444; font-size: 12px; padding: 6px 0; }
+    .feil { color: #9e5c5c; font-size: 12px; padding: 4px 0; display: none; }
+    .feil.vis { display: block; }
+  </style>
+</head>
+<body>
+
+  <h1>NHL What-If Simulator</h1>
+  <p class="intro">Hva hadde skjedd med et annet lag?</p>
+
+  <div class="seksjon">
+    <h3>Sesong og lag</h3>
+    <div class="rad">
+      <select id="sesongValg"></select>
+      <select id="lagValg" disabled><option value="">Velg lag...</option></select>
+    </div>
+    <div class="feil" id="feilBaseline"></div>
+    <div class="melding" id="meldingBaseline"></div>
+  </div>
+
+  <div class="seksjon" id="steg2" style="display:none">
+    <h3>Velg spiller som fjernes</h3>
+    <div class="melding" id="meldingRoster">Laster...</div>
+    <div class="feil" id="feilRoster"></div>
+    <div class="tabell-wrap" id="rosterWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Navn</th><th>Pos</th><th>Skyting</th>
+            <th>GP</th><th>G</th><th>A</th><th>Pts</th>
+            <th>EV</th><th>PP</th><th>TOI</th>
+          </tr>
+        </thead>
+        <tbody id="rosterTabell"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="seksjon" id="steg3" style="display:none">
+    <h3>Legg til ny spiller</h3>
+    <div class="faner">
+      <button class="fane aktiv" onclick="byttFane('sok')">Søk spiller</button>
+      <button class="fane" onclick="byttFane('manuell')">Manuell</button>
+    </div>
+
+    <div class="faneinnhold aktiv" id="faneSok">
+      <div class="sokerad">
+        <input type="text" id="sokInput" placeholder="Spillernavn...">
+        <button onclick="sokSpiller()">Søk</button>
+      </div>
+      <div class="sokresultater" id="sokResultater"></div>
+      <div class="feil" id="feilSok"></div>
+      <div class="melding" id="meldingSok"></div>
+    </div>
+
+    <div class="faneinnhold" id="faneManuell">
+      <div class="inputrad" style="margin-bottom:7px">
+        <div class="felt" style="grid-column:1/3">
+          <label>Navn</label>
+          <input type="text" id="mNavn" placeholder="Wayne Gretzky">
+        </div>
+        <div class="felt">
+          <label>GP</label>
+          <input type="number" id="mGP" placeholder="80">
+        </div>
+        <div class="felt">
+          <label>TOI/kamp (min)</label>
+          <input type="number" id="mTOI" placeholder="21.0" step="0.5">
+        </div>
+        <div class="felt">
+          <label>PP TOI/kamp</label>
+          <input type="number" id="mPPTOI" placeholder="4.0" step="0.5">
+        </div>
+      </div>
+      <div class="inputrad">
+        <div class="felt"><label>EV Mål</label><input type="number" id="mEVMaal" placeholder="0"></div>
+        <div class="felt"><label>EV Assists</label><input type="number" id="mEVAssist" placeholder="0"></div>
+        <div class="felt"></div>
+        <div class="felt"><label>PP Mål</label><input type="number" id="mPPMaal" placeholder="0"></div>
+        <div class="felt"><label>PP Assists</label><input type="number" id="mPPAssist" placeholder="0"></div>
+        <div class="felt"></div>
+        <div class="felt"><label>SH Mål</label><input type="number" id="mSHMaal" placeholder="0"></div>
+        <div class="felt"><label>SH Assists</label><input type="number" id="mSHAssist" placeholder="0"></div>
+        <div class="felt"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seksjon" id="steg4" style="display:none">
+    <button class="kjor-knapp" id="kjorKnapp" onclick="kjorSimulering()" disabled>Kjør simulering</button>
+    <div class="feil" id="feilSimulering"></div>
+  </div>
+
+  <div class="resultater" id="resultater">
+    <h2 id="resultatTittel">Resultater</h2>
+
+    <div class="poengboks">
+      <div class="poengside">
+        <div class="poengetikett">Uten ny spiller</div>
+        <div class="poengnavn" id="rUtenNavn"></div>
+        <div class="poengverdi" id="rUtenPoeng">—</div>
+        <div class="poengusikkerhet" id="rUtenUsikkerhet"></div>
+      </div>
+      <div class="poengmidt" id="rDelta">—</div>
+      <div class="poengside med">
+        <div class="poengetikett">Med ny spiller</div>
+        <div class="poengnavn" id="rMedNavn"></div>
+        <div class="poengverdi" id="rMedPoeng">—</div>
+        <div class="poengusikkerhet" id="rMedUsikkerhet"></div>
+      </div>
+    </div>
+
+    <div class="statistikkrad">
+      <div class="statistikkboks">
+        <div class="statistikketikkett">Sjanse for forbedring</div>
+        <div class="statistikkverdi" id="rSjanse">—</div>
+      </div>
+      <div class="statistikkboks">
+        <div class="statistikketikkett">Delta GF/kamp</div>
+        <div class="statistikkverdi" id="rDeltaGF">—</div>
+      </div>
+      <div class="statistikkboks">
+        <div class="statistikketikkett">Delta GA/kamp</div>
+        <div class="statistikkverdi" id="rDeltaGA">—</div>
+      </div>
+    </div>
+
+    <button onclick="nullstill()">← Ny simulering</button>
+  </div>
+
+<script>
+// Simuleringslogikk
+
+function mulberry32(fro) {
+  let t = fro >>> 0
+  return function () {
+    t += 0x6D2B79F5
+    let x = Math.imul(t ^ (t >>> 15), 1 | t)
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x)
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function poisson(lambda, tilfeldig) {
+  const l = Math.max(0.01, lambda)
+  const L = Math.exp(-l)
+  let k = 0, p = 1
+  do { k++; p *= tilfeldig() } while (p > L)
+  return k - 1
+}
+
+function simulerSesong({ kamper, maalFor, maalMot, otlSjanse, fro }) {
+  const tilfeldig = mulberry32(fro)
+  let poeng = 0, seire = 0, tap = 0, otl = 0
+  for (let i = 0; i < kamper; i++) {
+    const f = poisson(maalFor, tilfeldig)
+    const m = poisson(maalMot, tilfeldig)
+    if (f > m) { seire++; poeng += 2; continue }
+    if (f < m) {
+      if ((m - f) === 1 && tilfeldig() < otlSjanse) { otl++; poeng += 1 }
+      else { tap++ }
+      continue
+    }
+    if (tilfeldig() < 0.5) { seire++; poeng += 2 } else { otl++; poeng += 1 }
+  }
+  return poeng
+}
+
+function kjorMonteCarlo({ simuleringer, kamper, baseParams, nySpillerParams, startFro }) {
+  const base = { ...baseParams, maalMot: Math.max(0.1, baseParams.maalMot) }
+  const alt  = { ...nySpillerParams, maalMot: Math.max(0.1, nySpillerParams.maalMot) }
+  const basePoeng = [], altPoeng = []
+  for (let i = 0; i < simuleringer; i++) {
+    const fro = startFro + i
+    basePoeng.push(simulerSesong({ kamper, ...base, fro }))
+    altPoeng.push(simulerSesong({ kamper, ...alt, fro }))
+  }
+  const snitt = arr => arr.reduce((s, x) => s + x, 0) / arr.length
+  const std   = (arr, m) => Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / arr.length)
+  const bm = snitt(basePoeng), am = snitt(altPoeng)
+  return {
+    baseSnitt: bm, baseStd: std(basePoeng, bm),
+    nySnitt: am, nyStd: std(altPoeng, am),
+    deltaPoeng: am - bm,
+    sjanseForBedring: altPoeng.filter((p, i) => p > basePoeng[i]).length / simuleringer,
+  }
+}
+
+function beregnDeltaMaalFor(nySpiller, fjernet) {
+  const modell = { assistFaktor: { ev: 0.65, pp: 0.70, sh: 0.55 }, bruksFaktor: { ev: 0.62, pp: 0.72, sh: 0.55 } }
+  const rate = s => {
+    const { ev, pp, sh } = s.splits
+    return { evMaal: ev.g/s.gp, evAssist: ev.a/s.gp, ppMaal: pp.g/s.gp, ppAssist: pp.a/s.gp, shMaal: sh.g/s.gp, shAssist: sh.a/s.gp }
+  }
+  const n = rate(nySpiller), f = rate(fjernet)
+  const { assistFaktor: a, bruksFaktor: b } = modell
+  return (
+    b.ev * ((n.evMaal - f.evMaal) + a.ev * (n.evAssist - f.evAssist)) +
+    b.pp * ((n.ppMaal - f.ppMaal) + a.pp * (n.ppAssist - f.ppAssist)) +
+    b.sh * ((n.shMaal - f.shMaal) + a.sh * (n.shAssist - f.shAssist))
+  )
+}
+
+function beregnDeltaMaalMot(nySpiller, fjernet) {
+  const nTOI = nySpiller.toi, fTOI = fjernet.toi
+  const nEV = Math.max(0, nTOI.total_min - nTOI.pp_min - nTOI.pk_min)
+  const fEV = Math.max(0, fTOI.total_min - fTOI.pp_min - fTOI.pk_min)
+  const nRed = nySpiller.defense.ev_ga_reduction_per60 * (nEV/60) + nySpiller.defense.pk_ga_reduction_per60 * (nTOI.pk_min/60)
+  const fRed = fjernet.defense.ev_ga_reduction_per60 * (fEV/60) + fjernet.defense.pk_ga_reduction_per60 * (fTOI.pk_min/60)
+  return -(nRed - fRed)
+}
+
+function tilMMSS(min) {
+  const m = Math.floor(min)
+  const s = Math.round((min - m) * 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function fortegn(n) { return n >= 0 ? '+' : '' }
+
+// App-tilstand
+let tilstand = { sesong: null, lag: null, baseline: null, fjernet: null, nySpiller: null, aktivFane: 'sok' }
+
+function init() {
+  const sesongValg = document.getElementById('sesongValg')
+  sesongValg.innerHTML = '<option value="">Velg sesong...</option>'
+  for (let ar = 2023; ar >= 1990; ar--) {
+    const o = document.createElement('option')
+    o.value = `${ar}${ar+1}`
+    o.textContent = `${ar}-${String(ar+1).slice(2)}`
+    sesongValg.appendChild(o)
+  }
+
+  fetch('/api/teams').then(r => r.json()).then(lag => {
+    const valg = document.getElementById('lagValg')
+    lag.sort((a, b) => a.fullName.localeCompare(b.fullName))
+    lag.forEach(l => {
+      const o = document.createElement('option')
+      o.value = l.abbrev
+      o.textContent = `${l.abbrev} — ${l.fullName}`
+      valg.appendChild(o)
+    })
+    valg.disabled = false
+  })
+
+  document.getElementById('sesongValg').addEventListener('change', onEndring)
+  document.getElementById('lagValg').addEventListener('change', onEndring)
+  document.getElementById('sokInput').addEventListener('keydown', e => { if (e.key === 'Enter') sokSpiller() })
+}
+
+async function onEndring() {
+  const sesong = document.getElementById('sesongValg').value
+  const lag    = document.getElementById('lagValg').value
+  if (!sesong || !lag) return
+
+  tilstand.sesong = sesong
+  tilstand.lag = lag
+  tilstand.fjernet = null
+  tilstand.nySpiller = null
+
+  settTekst('meldingBaseline', 'Henter...')
+  skjul('feilBaseline')
+
+  try {
+    const data = await fetch(`/api/season/${lag}/${sesong}`).then(r => r.json())
+    if (data.error) throw new Error(data.error)
+    tilstand.baseline = data
+    settTekst('meldingBaseline', `GF: ${data.gf_total} — GA: ${data.ga_total} — GP: ${data.gp}`)
+    vis('steg2')
+    lastRoster()
+  } catch (e) {
+    settTekst('meldingBaseline', '')
+    visError('feilBaseline', e.message)
+  }
+}
+
+async function lastRoster() {
+  settTekst('meldingRoster', 'Laster roster...')
+  skjul('feilRoster')
+  skjul('rosterWrap')
+
+  try {
+    const spillere = await fetch(`/api/roster/${tilstand.lag}/${tilstand.sesong}`).then(r => r.json())
+    if (spillere.error) throw new Error(spillere.error)
+    byggRoster(spillere)
+    settTekst('meldingRoster', '')
+    vis('rosterWrap')
+    vis('steg3')
+    vis('steg4')
+  } catch (e) {
+    settTekst('meldingRoster', '')
+    visError('feilRoster', e.message)
+  }
+}
+
+function byggRoster(spillere) {
+  const kropp = document.getElementById('rosterTabell')
+  kropp.innerHTML = ''
+  spillere.forEach(s => {
+    if (!s.stats) return
+    const st = s.stats
+    const rad = document.createElement('tr')
+    rad.innerHTML = `
+      <td>${s.name}</td>
+      <td>${s.position}</td>
+      <td>${s.shoots}</td>
+      <td>${st.gp}</td>
+      <td>${st.goals}</td>
+      <td>${st.assists}</td>
+      <td><b>${st.points}</b></td>
+      <td class="dim">${st.splits.ev.g}+${st.splits.ev.a}</td>
+      <td class="dim">${st.splits.pp.g}+${st.splits.pp.a}</td>
+      <td class="dim">${tilMMSS(st.toi.total_min)}</td>
+    `
+    rad.addEventListener('click', () => {
+      document.querySelectorAll('#rosterTabell tr').forEach(r => r.classList.remove('valgt'))
+      rad.classList.add('valgt')
+      tilstand.fjernet = { name: s.name, position: s.position, gp: st.gp, splits: st.splits, shots: 0, toi: st.toi, defense: st.defense }
+      sjekkKlar()
+    })
+    kropp.appendChild(rad)
+  })
+}
+
+function byttFane(fane) {
+  tilstand.aktivFane = fane
+  tilstand.nySpiller = null
+  sjekkKlar()
+  document.querySelectorAll('.fane').forEach((f, i) => {
+    f.classList.toggle('aktiv', (i === 0 && fane === 'sok') || (i === 1 && fane === 'manuell'))
+  })
+  document.getElementById('faneSok').classList.toggle('aktiv', fane === 'sok')
+  document.getElementById('faneManuell').classList.toggle('aktiv', fane === 'manuell')
+}
+
+async function sokSpiller() {
+  const sporsmal = document.getElementById('sokInput').value.trim()
+  if (!sporsmal) return
+  settTekst('meldingSok', 'Søker...')
+  skjul('feilSok')
+  document.getElementById('sokResultater').classList.remove('vis')
+
+  try {
+    const resultater = await fetch(`/api/search/${encodeURIComponent(sporsmal)}`).then(r => r.json())
+    settTekst('meldingSok', '')
+    if (!resultater.length) { visError('feilSok', 'Ingen treff.'); return }
+    const el = document.getElementById('sokResultater')
+    el.innerHTML = ''
+    resultater.slice(0, 8).forEach(s => {
+      const div = document.createElement('div')
+      div.className = 'soktreffer'
+      div.innerHTML = `<span>${s.name}</span><span class="dim">${s.pos} · ${s.team}</span>`
+      div.addEventListener('click', () => velgSoktSpiller(div, s))
+      el.appendChild(div)
+    })
+    el.classList.add('vis')
+  } catch (e) {
+    settTekst('meldingSok', '')
+    visError('feilSok', e.message)
+  }
+}
+
+async function velgSoktSpiller(div, spiller) {
+  document.querySelectorAll('.soktreffer').forEach(r => r.classList.remove('valgt'))
+  div.classList.add('valgt')
+  tilstand.nySpiller = null
+  settTekst('meldingSok', 'Henter statistikk...')
+
+  try {
+    const stats = await fetch(`/api/player/${spiller.id}/${tilstand.sesong}`).then(r => r.json())
+    if (stats.error) throw new Error(stats.error)
+    tilstand.nySpiller = stats
+    const maal = stats.splits.ev.g + stats.splits.pp.g + stats.splits.sh.g
+    const assist = stats.splits.ev.a + stats.splits.pp.a + stats.splits.sh.a
+    settTekst('meldingSok', `${stats.gp} kamper — ${maal} mål, ${assist} assists`)
+    sjekkKlar()
+  } catch (e) {
+    settTekst('meldingSok', '')
+    visError('feilSok', e.message)
+  }
+}
+
+function hentManuellSpiller() {
+  const n = id => parseFloat(document.getElementById(id).value) || 0
+  const toi = n('mTOI')
+  return {
+    name: document.getElementById('mNavn').value.trim() || 'Fantasispiller',
+    gp: parseInt(document.getElementById('mGP').value) || 70,
+    splits: {
+      ev: { g: n('mEVMaal'), a: n('mEVAssist') },
+      pp: { g: n('mPPMaal'), a: n('mPPAssist') },
+      sh: { g: n('mSHMaal'), a: n('mSHAssist') },
+    },
+    shots: 0,
+    toi: { total_min: toi, pp_min: n('mPPTOI'), pk_min: toi * 0.05 },
+    defense: { ev_ga_reduction_per60: 0.08, pk_ga_reduction_per60: 0.06 },
+  }
+}
+
+function sjekkKlar() {
+  const klar = tilstand.fjernet && (
+    (tilstand.aktivFane === 'sok' && tilstand.nySpiller) ||
+    tilstand.aktivFane === 'manuell'
+  )
+  document.getElementById('kjorKnapp').disabled = !klar
+}
+
+function kjorSimulering() {
+  const nySpiller = tilstand.aktivFane === 'manuell' ? hentManuellSpiller() : tilstand.nySpiller
+  if (!nySpiller || !tilstand.fjernet || !tilstand.baseline) return
+
+  const knapp = document.getElementById('kjorKnapp')
+  knapp.textContent = 'Kjører...'
+  knapp.disabled = true
+
+  setTimeout(() => {
+    const { gf_total, ga_total, gp } = tilstand.baseline
+    const kamper   = gp
+    const maalFor  = gf_total / kamper
+    const maalMot  = ga_total / kamper
+
+    const deltaGF = beregnDeltaMaalFor(nySpiller, tilstand.fjernet)
+    const deltaGA = beregnDeltaMaalMot(nySpiller, tilstand.fjernet)
+
+    const resultat = kjorMonteCarlo({
+      simuleringer: 7000,
+      kamper,
+      baseParams:      { maalFor, maalMot, otlSjanse: 0.24 },
+      nySpillerParams: { maalFor: maalFor + deltaGF, maalMot: maalMot + deltaGA, otlSjanse: 0.24 },
+      startFro: 20000,
+    })
+
+    knapp.textContent = 'Kjør simulering'
+    knapp.disabled = false
+
+    const sesongTekst = `${tilstand.sesong.slice(0,4)}-${tilstand.sesong.slice(6)}`
+    const lagNavn = document.getElementById('lagValg').selectedOptions[0].text.split('—')[1]?.trim() ?? ''
+    document.getElementById('resultatTittel').textContent = `${lagNavn} ${sesongTekst}`
+
+    const delta = resultat.deltaPoeng
+    const positivt = delta >= 0
+
+    document.getElementById('rUtenNavn').textContent = `Uten ${nySpiller.name}`
+    document.getElementById('rUtenPoeng').textContent = resultat.baseSnitt.toFixed(1)
+    document.getElementById('rUtenUsikkerhet').textContent = `± ${resultat.baseStd.toFixed(1)}`
+
+    document.getElementById('rMedNavn').textContent = `Med ${nySpiller.name}`
+    const medPoeng = document.getElementById('rMedPoeng')
+    medPoeng.textContent = resultat.nySnitt.toFixed(1)
+    medPoeng.className = `poengverdi ${positivt ? 'opp' : 'ned'}`
+
+    document.getElementById('rMedUsikkerhet').textContent = `± ${resultat.nyStd.toFixed(1)}`
+
+    const deltaEl = document.getElementById('rDelta')
+    deltaEl.textContent = `${fortegn(delta)}${delta.toFixed(1)}`
+    deltaEl.className = `poengmidt ${positivt ? 'opp' : 'ned'}`
+
+    const sjanse = document.getElementById('rSjanse')
+    sjanse.textContent = `${(resultat.sjanseForBedring * 100).toFixed(1)}%`
+    sjanse.className = `statistikkverdi ${resultat.sjanseForBedring >= 0.5 ? 'opp' : 'ned'}`
+
+    const gfEl = document.getElementById('rDeltaGF')
+    gfEl.textContent = `${fortegn(deltaGF)}${deltaGF.toFixed(3)}`
+    gfEl.className = `statistikkverdi ${deltaGF >= 0 ? 'opp' : 'ned'}`
+
+    const gaEl = document.getElementById('rDeltaGA')
+    gaEl.textContent = `${fortegn(deltaGA)}${deltaGA.toFixed(3)}`
+    gaEl.className = `statistikkverdi ${deltaGA <= 0 ? 'opp' : 'ned'}`
+
+    document.getElementById('resultater').classList.add('vis')
+    document.getElementById('resultater').scrollIntoView({ behavior: 'smooth' })
+  }, 50)
+}
+
+function nullstill() {
+  document.getElementById('resultater').classList.remove('vis')
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function vis(id)  { document.getElementById(id).style.display = '' }
+function skjul(id) { document.getElementById(id).style.display = 'none' }
+function settTekst(id, tekst) { document.getElementById(id).textContent = tekst }
+function visError(id, melding) { const el = document.getElementById(id); el.textContent = melding; el.classList.add('vis') }
+
+init()
+</script>
+</body>
+</html>

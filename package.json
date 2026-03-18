@@ -1,0 +1,16 @@
+{
+  "name": "nhl-what-if-simulator",
+  "version": "2.0.0",
+  "description": "Interaktiv NHL sesong-simulator — hva hadde skjedd om et lag hadde hatt en annen spiller?",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node cli.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -98,7 +98,12 @@ export async function fetchRosterWithStats(teamAbbrev, seasonId) {
     `?cayenneExp=seasonId=${seasonId}%20and%20gameTypeId=2%20and%20teamAbbrevs=%22${teamAbbrev}%22` +
     `&sort=points&limit=100`
   const statsData = await get(statsUrl)
-
+// ev = even strength (5v5) altså mål eller assist scoret med like mange mann på isen, 
+// pp = power play altså mål eller assist scoret i overtallsspill når en spiller fra det andre
+// laget har blitt utvist og et lag har fordel av flere spiller på isen, 
+// sh = short handed, altså mål eller assist score for laget som har en spiller utvist altså
+// i undertallsspill
+// g = mål, a = assists — ev beregnes som total minus pp og sh
   return (statsData.data ?? []).map(s => {
     const rosterInfo = rosterMap[s.playerId] ?? {}
     const ev_g = s.evGoals ?? 0

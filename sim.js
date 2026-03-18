@@ -61,6 +61,10 @@ function ratePerGame(p) {
   }
 }
 
+
+// s = ny spiller (star), r = spiller som fjernes (replaced)
+// a = hvor mange assists indirekte bidrar til mål
+// u = vekting for å justere for rolleforskjeller mellom spillerne
 export function computeDeltaGFpg(star, replaced, model) {
   const s = ratePerGame(star)
   const r = ratePerGame(replaced)
